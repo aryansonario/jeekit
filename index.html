@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JEEkit – Study Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-app text-white min-h-screen">
+
+  <!-- ===== FIRST-TIME MODAL ===== -->
+  <div id="onboardingModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-glow"></div>
+      <div class="relative z-10">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="logo-icon">⚡</div>
+          <div>
+            <h2 class="text-2xl font-bold text-white">Welcome to JEEkit</h2>
+            <p class="text-gray-400 text-sm">Your personal study command center</p>
+          </div>
+        </div>
+
+        <div class="space-y-5">
+          <!-- Name -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Your Name (optional)</label>
+            <input id="onboardName" type="text" placeholder="Enter your name…" class="input-field w-full" />
+          </div>
+
+          <!-- Exam -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Select Exam</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button class="select-btn active" data-group="exam" data-value="JEE" onclick="selectOption(this)">
+                <span class="text-lg">🎯</span> JEE
+              </button>
+              <button class="select-btn" data-group="exam" data-value="NEET" onclick="selectOption(this)">
+                <span class="text-lg">🧬</span> NEET
+              </button>
+            </div>
+          </div>
+
+          <!-- Class -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Select Class</label>
+            <div class="grid grid-cols-3 gap-3">
+              <button class="select-btn active" data-group="class" data-value="Class 11" onclick="selectOption(this)">Class 11</button>
+              <button class="select-btn" data-group="class" data-value="Class 12" onclick="selectOption(this)">Class 12</button>
+              <button class="select-btn" data-group="class" data-value="Dropper" onclick="selectOption(this)">Dropper</button>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="saveOnboarding()" class="btn-primary w-full mt-8 py-3 text-base font-semibold">
+          Let's Start Studying →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header-bar">
+    <div class="flex items-center gap-3">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text">JEEkit</span>
+      <button id="sidebarToggle" class="ml-2 sidebar-toggle-btn" onclick="toggleSidebar()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="streak-badge" id="headerStreak">
+      <span class="streak-fire">🔥</span>
+      <span id="streakCount">0</span>
+      <span class="text-gray-400 text-sm">day streak</span>
+    </div>
+
+    <div class="header-right">
+      <div class="exam-chip">
+        <span id="headerExam">JEE</span>
+        <span class="text-gray-500">·</span>
+        <span id="headerClass">Class 11</span>
+      </div>
+      <div class="countdown-chip">
+        <span class="text-amber-400">⏳</span>
+        <span id="countdownDays">—</span>
+        <span class="text-gray-400 text-xs">days left</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== TOP NAV (Practice) ===== -->
+  <nav class="top-nav">
+    <button class="nav-tab active" onclick="switchTab('timer', this)">🕐 Study Timer</button>
+    <button class="nav-tab" onclick="switchTab('pyqs', this)">📚 PYQs</button>
+    <button class="nav-tab" onclick="switchTab('mock', this)">📝 Mock Tests</button>
+    <button class="nav-tab" onclick="switchTab('formulas', this)">🔬 Formulas</button>
+    <button class="nav-tab" onclick="switchTab('rank', this)">🏆 Rank Predictor</button>
+  </nav>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="main-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Today's Targets</span>
+        <button onclick="openAddSubject()" class="add-btn" title="Add subject">+</button>
+      </div>
+
+      <!-- Daily progress summary -->
+      <div class="daily-summary">
+        <div class="summary-stat">
+          <span id="totalStudied">0h 0m</span>
+          <span class="summary-label">Studied</span>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-stat">
+          <span id="totalTarget">0h</span>
+          <span class="summary-label">Target</span>
+        </div>
+      </div>
+
+      <!-- Subject list -->
+      <div id="subjectList" class="subject-list space-y-3"></div>
+
+      <!-- Add subject modal inline -->
+      <div id="addSubjectPanel" class="add-subject-panel hidden mt-4">
+        <input id="newSubjectName" type="text" placeholder="Subject name" class="input-field w-full mb-2" />
+        <div class="flex gap-2">
+          <input id="newSubjectHours" type="number" placeholder="Hours" min="0.5" max="12" step="0.5" class="input-field flex-1" />
+          <button onclick="addSubject()" class="btn-primary px-4 py-2 text-sm">Add</button>
+          <button onclick="closeAddSubject()" class="btn-ghost px-3 py-2 text-sm">✕</button>
+        </div>
+      </div>
+
+      <!-- Session Log -->
+      <div class="mt-6">
+        <div class="sidebar-section-title">Session Log</div>
+        <div id="sessionLog" class="session-log">
+          <p class="text-gray-600 text-xs text-center py-4">No sessions yet today</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER WORKSPACE -->
+    <main class="workspace">
+
+      <!-- ===== TIMER TAB ===== -->
+      <div id="tab-timer" class="tab-content active">
+
+        <!-- Timer Mode Selector -->
+        <div class="mode-selector">
+          <button class="mode-btn active" onclick="setMode('stopwatch', this)">⏱ Stopwatch</button>
+          <button class="mode-btn" onclick="setMode('countdown', this)">⏳ Countdown</button>
+          <button class="mode-btn" onclick="setMode('pomodoro', this)">🍅 Pomodoro</button>
+        </div>
+
+        <!-- Timer Card -->
+        <div class="timer-card">
+          <div class="timer-card-inner">
+
+            <!-- Subject Selector -->
+            <div class="subject-selector-wrap mb-5">
+              <label class="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-1 block">Studying:</label>
+              <select id="timerSubjectSelect" class="subject-select">
+                <option value="">Select a subject…</option>
+              </select>
+            </div>
+
+            <!-- Pomodoro Status -->
+            <div id="pomodoroStatus" class="pomodoro-status hidden">
+              <div id="pomodoroLabel" class="pomo-label">Focus Time</div>
+              <div id="pomodoroSession" class="pomo-session">Session 1 of 4</div>
+            </div>
+
+            <!-- Countdown input -->
+            <div id="countdownInput" class="countdown-input hidden">
+              <div class="flex items-center gap-3 justify-center mb-4">
+                <div class="time-input-group">
+                  <input id="countdownHours" type="number" min="0" max="23" value="0" class="time-input" />
+                  <span class="time-label">h</span>
+                </div>
+                <span class="text-gray-600 text-2xl">:</span>
+                <div class="time-input-group">
+                  <input id="countdownMins" type="number" min="0" max="59" value="25" class="time-input" />
+                  <span class="time-label">m</span>
+                </div>
+                <span class="text-gray-600 text-2xl">:</span>
+                <div class="time-input-group">
+                  <input id="countdownSecs" type="number" min="0" max="59" value="0" class="time-input" />
+                  <span class="time-label">s</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timer Ring -->
+            <div class="timer-ring-wrap">
+              <svg class="timer-ring" viewBox="0 0 220 220">
+                <circle class="ring-bg" cx="110" cy="110" r="95"/>
+                <circle id="ringProgress" class="ring-progress" cx="110" cy="110" r="95"/>
+              </svg>
+              <div class="timer-display">
+                <div id="timerDisplay" class="timer-digits">00:00:00</div>
+                <div id="timerStatus" class="timer-status-text">Ready</div>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="timer-controls">
+              <button id="resetBtn" onclick="resetTimer()" class="ctrl-btn ctrl-secondary" title="Reset">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+              </button>
+              <button id="startPauseBtn" onclick="toggleTimer()" class="ctrl-btn ctrl-primary">
+                <span id="startPauseIcon">▶</span>
+              </button>
+              <button onclick="logSession()" class="ctrl-btn ctrl-secondary" title="Save session">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Today's Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-value" id="todayTotal">0m</div>
+            <div class="stat-label">Today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="weekTotal">0h</div>
+            <div class="stat-label">This Week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="avgDaily">0m</div>
+            <div class="stat-label">Daily Avg</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== PYQS TAB ===== -->
+      <div id="tab-pyqs" class="tab-content hidden">
+        <div class="placeholder-page">
+          <div class="placeholder-icon">📚</div>
+          <h2>Previous Year Questions</h2>
+          <p>Chapter-wise PYQs with solutions for JEE & NEET coming soon.</p>
+          <div class="placeholder-chips">
+            <span class="chip">Physics</span><span class="chip">Chemistry</span><span class="chip">Maths</span><span class="chip">Biology</span>
+          </div>
+          <div class="coming-soon-badge">Coming Soon</div>
+        </div>
+      </div>
+
+      <!-- ===== MOCK TAB ===== -->
+      <div id="tab-mock" class="tab-content hidden">
+        <div class="placeholder-page">
+          <div class="placeholder-icon">📝</div>
+          <h2>Mock Tests</h2>
+          <p>Full-length timed mock tests simulating actual JEE / NEET exam pattern.</p>
+          <div class="placeholder-chips">
+            <span class="chip">JEE Mains Pattern</span><span class="chip">JEE Advanced Pattern</span><span class="chip">NEET Pattern</span>
+          </div>
+          <div class="coming-soon-badge">Coming Soon</div>
+        </div>
+      </div>
+
+      <!-- ===== FORMULAS TAB ===== -->
+      <div id="tab-formulas" class="tab-content hidden">
+        <div class="placeholder-page">
+          <div class="placeholder-icon">🔬</div>
+          <h2>Formula Sheets</h2>
+          <p>Quick-access formula sheets for all important chapters.</p>
+          <div class="placeholder-chips">
+            <span class="chip">Kinematics</span><span class="chip">Thermodynamics</span><span class="chip">Organic Chemistry</span><span class="chip">Calculus</span>
+          </div>
+          <div class="coming-soon-badge">Coming Soon</div>
+        </div>
+      </div>
+
+      <!-- ===== RANK TAB ===== -->
+      <div id="tab-rank" class="tab-content hidden">
+        <div class="placeholder-page">
+          <div class="placeholder-icon">🏆</div>
+          <h2>Rank Predictor</h2>
+          <p>Predict your JEE / NEET rank based on your mock test scores and historical data.</p>
+          <div class="coming-soon-badge">Coming Soon</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ===== FLOATING TOOLS ===== -->
+  <div class="floating-tools">
+    <button class="float-btn" onclick="toggleTool('calculator')" title="Calculator">🧮</button>
+    <button class="float-btn" onclick="toggleTool('calendar')" title="Calendar">📅</button>
+    <button class="float-btn music-btn" onclick="toggleTool('music')" title="Music">🎵</button>
+  </div>
+
+  <!-- ===== CALCULATOR ===== -->
+  <div id="calculatorPanel" class="float-panel hidden" style="right:80px; bottom:80px;">
+    <div class="panel-header">
+      <span>🧮 Calculator</span>
+      <div class="flex gap-2">
+        <button onclick="clearCalcHistory()" class="panel-close-btn text-gray-500 hover:text-white text-xs">History</button>
+        <button onclick="closePanel('calculator')" class="panel-close-btn">✕</button>
+      </div>
+    </div>
+    <div id="calcHistory" class="calc-history hidden"></div>
+    <div class="calc-display">
+      <div id="calcExpression" class="calc-expr"></div>
+      <div id="calcResult" class="calc-res">0</div>
+    </div>
+    <div class="calc-grid">
+      <!-- Row 1 -->
+      <button class="calc-btn calc-fn" onclick="calcInput('sin(')">sin</button>
+      <button class="calc-btn calc-fn" onclick="calcInput('cos(')">cos</button>
+      <button class="calc-btn calc-fn" onclick="calcInput('tan(')">tan</button>
+      <button class="calc-btn calc-op" onclick="calcClear()">C</button>
+      <button class="calc-btn calc-op" onclick="calcBackspace()">⌫</button>
+      <!-- Row 2 -->
+      <button class="calc-btn calc-fn" onclick="calcInput('log(')">log</button>
+      <button class="calc-btn calc-fn" onclick="calcInput('ln(')">ln</button>
+      <button class="calc-btn calc-fn" onclick="calcInput('sqrt(')">√</button>
+      <button class="calc-btn calc-fn" onclick="calcInput('Math.PI')">π</button>
+      <button class="calc-btn calc-fn" onclick="calcInput('Math.E')">e</button>
+      <!-- Row 3 -->
+      <button class="calc-btn calc-num" onclick="calcInput('7')">7</button>
+      <button class="calc-btn calc-num" onclick="calcInput('8')">8</button>
+      <button class="calc-btn calc-num" onclick="calcInput('9')">9</button>
+      <button class="calc-btn calc-op" onclick="calcInput('/')">÷</button>
+      <button class="calc-btn calc-op" onclick="calcInput('%')">%</button>
+      <!-- Row 4 -->
+      <button class="calc-btn calc-num" onclick="calcInput('4')">4</button>
+      <button class="calc-btn calc-num" onclick="calcInput('5')">5</button>
+      <button class="calc-btn calc-num" onclick="calcInput('6')">6</button>
+      <button class="calc-btn calc-op" onclick="calcInput('*')">×</button>
+      <button class="calc-btn calc-op" onclick="calcInput('**')">xʸ</button>
+      <!-- Row 5 -->
+      <button class="calc-btn calc-num" onclick="calcInput('1')">1</button>
+      <button class="calc-btn calc-num" onclick="calcInput('2')">2</button>
+      <button class="calc-btn calc-num" onclick="calcInput('3')">3</button>
+      <button class="calc-btn calc-op" onclick="calcInput('-')">−</button>
+      <button class="calc-btn calc-op" onclick="calcInput('(')"> ( </button>
+      <!-- Row 6 -->
+      <button class="calc-btn calc-num" onclick="calcInput('0')">0</button>
+      <button class="calc-btn calc-num" onclick="calcInput('.')">.</button>
+      <button class="calc-btn calc-equals" onclick="calcEquals()">=</button>
+      <button class="calc-btn calc-op" onclick="calcInput('+')">+</button>
+      <button class="calc-btn calc-op" onclick="calcInput(')')"> ) </button>
+    </div>
+    <button onclick="copyCalcResult()" class="copy-result-btn">Copy Result</button>
+  </div>
+
+  <!-- ===== CALENDAR ===== -->
+  <div id="calendarPanel" class="float-panel hidden" style="right:80px; bottom:80px; width:340px;">
+    <div class="panel-header">
+      <button onclick="changeMonth(-1)" class="panel-nav-btn">‹</button>
+      <span id="calendarTitle">Month Year</span>
+      <button onclick="changeMonth(1)" class="panel-nav-btn">›</button>
+      <button onclick="closePanel('calendar')" class="panel-close-btn ml-2">✕</button>
+    </div>
+    <div class="cal-days-header">
+      <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+    </div>
+    <div id="calendarGrid" class="cal-grid"></div>
+    <!-- Reminder input -->
+    <div id="reminderInputArea" class="reminder-input-area hidden">
+      <p id="reminderDateLabel" class="text-xs text-gray-400 mb-2"></p>
+      <input id="reminderText" type="text" placeholder="Add a reminder…" class="input-field w-full mb-2" />
+      <div class="flex gap-2">
+        <button onclick="saveReminder()" class="btn-primary flex-1 py-2 text-sm">Save</button>
+        <button onclick="closeReminderInput()" class="btn-ghost py-2 px-3 text-sm">✕</button>
+      </div>
+    </div>
+    <div id="remindersForDate" class="reminders-list hidden"></div>
+  </div>
+
+  <!-- ===== MUSIC PLAYER ===== -->
+  <div id="musicPanel" class="float-panel hidden music-panel" style="right:80px; bottom:80px; width:320px;">
+    <div class="panel-header">
+      <span>🎵 Lofi Study Music</span>
+      <button onclick="closePanel('music')" class="panel-close-btn">✕</button>
+    </div>
+    <div class="music-thumb">
+      <div class="music-vinyl" id="musicVinyl">🎵</div>
+      <div>
+        <div class="music-title">Lofi Hip Hop Radio</div>
+        <div class="music-sub">beats to study/relax to</div>
+      </div>
+    </div>
+    <div id="youtubeContainer" class="youtube-container">
+      <iframe id="ytPlayer" width="100%" height="160"
+        src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=0&controls=1&modestbranding=1&rel=0"
+        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
+      </iframe>
+    </div>
+    <div class="music-note">🎧 Use YouTube controls above to play/pause</div>
+  </div>
+
+  <!-- Notification toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
